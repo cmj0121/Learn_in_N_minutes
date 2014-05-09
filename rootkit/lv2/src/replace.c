@@ -102,14 +102,16 @@ TRAPE:
 /* Filter out the result for ls */
 struct dirent *readdir(DIR *__dirp) {
 	struct dirent *_ = NULL;
-	
-	while (NULL != (_ = _readdir(__dirp)) && 0 != filter(_->d_name, -1, -1));
+
+	if (_readdir)	
+		while (NULL != (_ = _readdir(__dirp)) && 0 != filter(_->d_name, -1, -1));
 	return _;
 }
 struct dirent64 *readdir64(DIR *__dirp) {
 	struct dirent64 *_ = NULL;
 
-	while (NULL != (_ = _readdir64(__dirp)) && 0 != filter(_->d_name, -1, -1));
+	if (_readdir64)
+		while (NULL != (_ = _readdir64(__dirp)) && 0 != filter(_->d_name, -1, -1));
 	return _;
 }
 
@@ -123,14 +125,14 @@ int __xstat(int __ver, const char *__filename, struct stat *__stat_buf) {
 		return -1;
 	}
 	MSG("stat by %s", __filename);
-	_ = _xstat(__ver, __filename, __stat_buf);
+	if (_xstat) _ = _xstat(__ver, __filename, __stat_buf);
 	return _;
 }
 int __lxstat(int __ver, const char *__filename, struct stat *__stat_buf) {
 	int _;
 
 	MSG("lstat by %s", __filename);
-	_ = _lxstat(__ver, __filename, __stat_buf);
+	if (_lxstat) _ = _lxstat(__ver, __filename, __stat_buf);
 	if (0 != filter(__filename, __stat_buf->st_uid, __stat_buf->st_gid)) {
 		errno = ENOENT;
 		return -1;
@@ -141,7 +143,7 @@ int __fxstat(int __ver, int __fildes, struct stat *__stat_buf) {
 	int _;
 
 	MSG("fstat by fd %d", __fildes);
-	_ = _fxstat(__ver, __fildes, __stat_buf);
+	if (_fxstat) _ = _fxstat(__ver, __fildes, __stat_buf);
 	if (0 != filter(NULL, __stat_buf->st_uid, __stat_buf->st_gid)) {
 		errno = ENOENT;
 		return -1;
@@ -156,14 +158,14 @@ int __xstat64(int __ver, const char *__filename, struct stat64 *__stat_buf) {
 		return -1;
 	}
 	MSG("stat64 %s", __filename);
-	_ = _xstat64(__ver, __filename, __stat_buf);
+	if (_xstat64) _ = _xstat64(__ver, __filename, __stat_buf);
 	return _;
 }
 int __lxstat64(int __ver, const char *__filename, struct stat64 *__stat_buf) {
 	int _;
 
 	MSG("lstat64 %s", __filename);
-	_ = _lxstat64(__ver, __filename, __stat_buf);
+	if (_lxstat64) _ = _lxstat64(__ver, __filename, __stat_buf);
 	if (0 != filter(__filename, __stat_buf->st_uid, __stat_buf->st_gid)) {
 		errno = ENOENT;
 		return -1;
@@ -174,7 +176,7 @@ int __fxstat64(int __ver, int __fildes, struct stat64 *__stat_buf) {
 	int _;
 
 	MSG("fstat64 by fd: %d", __fildes);
-	_ = _fxstat64(__ver, __fildes, __stat_buf);
+	if (_fxstat) _ = _fxstat64(__ver, __fildes, __stat_buf);
 	if (0 != filter(NULL, __stat_buf->st_uid, __stat_buf->st_gid)) {
 		errno = ENOENT;
 		return -1;
@@ -185,7 +187,7 @@ char *getenv(const char *__name) {
 	char *_ = NULL;
 
 	MSG("getenv: %s", __name);
-	_ = _getenv(__name);
+	if (_getenv) _ = _getenv(__name);
 	return _;
 }
 /* unistd.h */
@@ -193,33 +195,26 @@ int execv (const char *__path, char *const __argv[]) {
 	int _;
 
 	MSG("Execute %s by execv", __path);
-	_ = _execv(__path, __argv);
+	if (_execv) _ = _execv(__path, __argv);
 	return _;
 }
 int execve(const char *__path, char *const __argv[], char *const __envp[]) {
-	int _, ENV_LEN=0;
-	char **ptr = NULL;
+	int _;
 
 	MSG("Execute %s by execve", __path);
-
-	/* Replace the ENV for env binary  */
-	if (0 == (strcmp(__path, "/usr/bin/env"))) {
-		for (ptr=(char **)__envp; (*ptr); ptr++) ENV_LEN += 1;
-	}
-	_ = _execve(__path, __argv, __envp);
+	if (_execve) _ = _execve(__path, __argv, __envp);
 	return _;
 }
 int open(const char *__file, int __oflag, ...) {
 	int _;
-	char szPath[BUFSIZ] = {0};
 	va_list args;
 
 	va_start(args, __oflag);
 	MSG("open file %s", __file);
 	if (0 != filter(__file, -1, -1)) {
-		snprintf(szPath, sizeof(szPath), "/tmp/%s", basename((char *)__file));
-		_ = _open(szPath, __oflag, args);
-	} else {
+		errno = ENOENT;
+		_ = -1;
+	} else if (_open) {
 		_ = _open(__file, __oflag, args);
 	}
 	va_end(args);
@@ -229,6 +224,6 @@ int unlink(const char *__name) {
 	int _;
 
 	MSG("Unlink %s", __name);
-	_ = _unlink(__name);
+	if(_unlink) _ = _unlink(__name);
 	return _;
 }
