@@ -193,6 +193,7 @@ int execvp (const char *__file, char *const __argv[]) {
 static void _init_fcntl_(void) {
 	_open   = dlsym(RTLD_NEXT, "open");
 	_open64 = dlsym(RTLD_NEXT, "open64");
+	_dlopen = dlsym(RTLD_NEXT, "dlopen");
 }
 int open (const char *__file, int __oflag, ...) {
 	int _ = -1;
@@ -220,6 +221,16 @@ int open64 (const char *__file, int __oflag, ...) {
 	return _;
 }
 #endif /* __USE_LARGEFILE64 */
+void *dlopen (const char *__file, int __mode) {
+	void *_ = NULL;
+
+	if (_dlopen) {
+		_ = _dlopen(__file, __mode);
+		LOG_MSG("%s", __file);
+	}
+
+	return _;
+}
 
 /* ==== sys/stat.h ==== */
 static void _init_sys_stat_(void) {
@@ -381,7 +392,16 @@ int connect (int __fd, __CONST_SOCKADDR_ARG __addr, socklen_t __len) {
 	if (_connect) {
 		_ = _connect(__fd, __addr, __len);
 		addr = (const struct sockaddr_in **)&__addr;
-		LOG_MSG("%s:%u %m", inet_ntoa((*addr)->sin_addr), (*addr)->sin_port);
+		if (AF_UNIX == (*addr)->sin_family) {
+			LOG_MSG("%hu:%s %m",
+				AF_UNIX,
+				(*((const struct sockaddr_un **)&__addr))->sun_path);
+		} else if (AF_INET == (*addr)->sin_family) {
+			LOG_MSG("%hu:%s:%hu %m",
+				AF_UNIX,
+				inet_ntoa((*addr)->sin_addr),
+				(*addr)->sin_port);
+		}
 	}
 	return _;
 }

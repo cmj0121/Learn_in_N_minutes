@@ -24,6 +24,7 @@ static int (*_open)    (const char *__file, int __oflag, ...);
 #ifdef __USE_LARGEFILE64
 static int (*_open64)  (const char *__file, int __oflag, ...);
 #endif /* __USE_LARGEFILE64 */
+static void* (*_dlopen) (const char *__file, int __mode);
 
 /* ==== sys/stat.h ==== */
 static void _init_sys_stat_(void);
