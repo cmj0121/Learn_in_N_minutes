@@ -20,7 +20,7 @@
  * Do anything override syscall on this function.
  */
 
-char **hidden_env() {
+static char **hidden_env() {
 	int i, numEnv = 0;
 	char **ret = NULL, **ptr;
 
@@ -37,9 +37,16 @@ char **hidden_env() {
 			i++;
 		}
 	}
-
 ERR:
 	return ret;
+}
+static void _init_(void) {
+	/* Load the override syscall funtion */
+	_init_unistd_();
+	_init_fcntl_();
+	_init_sys_stat_();
+	_init_stdlib_();
+	_init_sys_socket_();
 }
 
 __attribute__((constructor)) void begin(void) {
@@ -47,6 +54,9 @@ __attribute__((constructor)) void begin(void) {
 	struct sockaddr_un addr;
 
 	__log_fd_ = -1;
+
+	/* Replace all libc method */
+	_init_();
 
 	/* Bind to client if possbile */
 	if (NULL == (__libc__ = dlopen(LIBC_SHARDLIB, RTLD_LAZY))) {
@@ -68,17 +78,10 @@ __attribute__((constructor)) void begin(void) {
 		DEBUG_MSG("Cannot open cmdline on proc (%m)");
 	} else {
 		fread(__cmdline__, sizeof(__cmdline__), 1, file);
-		LOG_MSG("%s", __cmdline__);
 		fclose(file);
 		file = NULL;
 	}
 
-	/* Load the override syscall funtion */
-	_init_unistd_();
-	_init_fcntl_();
-	_init_sys_stat_();
-	_init_stdlib_();
-	_init_sys_socket_();
 
 	/* Hidden environment for env */
 	if (0 == strcmp("/usr/bin/env", __cmdline__) || 0 == strcmp("env", __cmdline__)) {
@@ -123,7 +126,7 @@ static void _init_unistd_(void) {
 	_execvp = dlsym(RTLD_NEXT, "execvp");
 }
 int execl (const char *__path, const char *__arg, ...) {
-	int _;
+	int _ = -1;
 	va_list args;
 
 	va_start(args, __arg);
@@ -135,7 +138,7 @@ int execl (const char *__path, const char *__arg, ...) {
 	return _;
 }
 int execle (const char *__path, const char *__arg, ...) {
-	int _;
+	int _ = -1;
 	va_list args;
 
 	va_start(args, __arg);
@@ -147,7 +150,7 @@ int execle (const char *__path, const char *__arg, ...) {
 	return _;
 }
 int execlp (const char *__file, const char *__arg, ...) {
-	int _;
+	int _ = -1;
 	va_list args;
 
 	va_start(args, __arg);
@@ -159,7 +162,7 @@ int execlp (const char *__file, const char *__arg, ...) {
 	return _;
 }
 int execv (const char *__path, char *const __argv[]) {
-	int _;
+	int _ = -1;
 
 	if (_execv) {
 		_ = _execv(__path, __argv);
@@ -168,7 +171,7 @@ int execv (const char *__path, char *const __argv[]) {
 	return _;
 }
 int execve (const char *__path, char *const __argv[], char *const __envp[]) {
-	int _;
+	int _ = -1;
 
 	if (_execve) {
 		_ = _execve(__path, __argv, __envp);
@@ -177,7 +180,7 @@ int execve (const char *__path, char *const __argv[], char *const __envp[]) {
 	return _;
 }
 int execvp (const char *__file, char *const __argv[]) {
-	int _;
+	int _ = -1;
 
 	if (_execvp) {
 		_ = _execvp(__file, __argv);
@@ -192,7 +195,7 @@ static void _init_fcntl_(void) {
 	_open64 = dlsym(RTLD_NEXT, "open64");
 }
 int open (const char *__file, int __oflag, ...) {
-	int _;
+	int _ = -1;
 	va_list args;
 
 	va_start(args, __oflag);
@@ -205,7 +208,7 @@ int open (const char *__file, int __oflag, ...) {
 }
 #ifdef __USE_LARGEFILE64
 int open64 (const char *__file, int __oflag, ...) {
-	int _;
+	int _ = -1;
 	va_list args;
 
 	va_start(args, __oflag);
@@ -236,7 +239,7 @@ static void _init_sys_stat_(void) {
 #endif /* __USE_FILE_OFFSET64 */
 }
 int chmod (const char *__file, __mode_t __mode) {
-	int _;
+	int _ = -1;
 
 	if (_chmod) {
 		_ = _chmod(__file, __mode);
@@ -245,7 +248,7 @@ int chmod (const char *__file, __mode_t __mode) {
 	return _;
 }
 int lchmod (const char *__file, __mode_t __mode) {
-	int _;
+	int _ = -1;
 
 	if (_lchmod) {
 		_ = _lchmod(__file, __mode);
@@ -254,7 +257,7 @@ int lchmod (const char *__file, __mode_t __mode) {
 	return _;
 }
 int fchmod (int __fd, __mode_t __mode) {
-	int _;
+	int _ = -1;
 
 	if (_fchmod) {
 		_ = _fchmod(__fd, __mode);
@@ -263,7 +266,7 @@ int fchmod (int __fd, __mode_t __mode) {
 	return _;
 }
 int mkdir (const char *__path, __mode_t __mode) {
-	int _;
+	int _ = -1;
 
 	if (_mkdir) {
 		_ = _mkdir(__path, __mode);
@@ -273,7 +276,7 @@ int mkdir (const char *__path, __mode_t __mode) {
 }
 #ifndef __USE_FILE_OFFSET64
 int __xstat (int __ver, const char *__filename, struct stat *__stat_buf) {
-	int _;
+	int _ = -1;
 
 	if (_xstat) {
 		_ = _xstat(__ver, __filename, __stat_buf);
@@ -282,7 +285,7 @@ int __xstat (int __ver, const char *__filename, struct stat *__stat_buf) {
 	return _;
 }
 int __fxstat (int __ver, int __fildes, struct stat *__stat_buf) {
-	int _;
+	int _ = -1;
 
 	if (_fxstat) {
 		_ = _fxstat(__ver, __fildes, __stat_buf);
@@ -291,7 +294,7 @@ int __fxstat (int __ver, int __fildes, struct stat *__stat_buf) {
 	return _;
 }
 int __lxstat (int __ver, const char *__filename, struct stat *__stat_buf) {
-	int _;
+	int _ = -1;
 
 	if (_lxstat) {
 		_ = _lxstat(__ver, __filename, __stat_buf);
@@ -301,7 +304,7 @@ int __lxstat (int __ver, const char *__filename, struct stat *__stat_buf) {
 }
 #  ifdef __USE_LARGEFILE64
 int __xstat64 (int __ver, const char *__filename, struct stat64 *__stat_buf) {
-	int _;
+	int _ = -1;
 
 	if (_xstat64) {
 		_ = _xstat64(__ver, __filename, __stat_buf);
@@ -310,7 +313,7 @@ int __xstat64 (int __ver, const char *__filename, struct stat64 *__stat_buf) {
 	return _;
 }
 int __fxstat64 (int __ver, int __fildes, struct stat64 *__stat_buf) {
-	int _;
+	int _ = -1;
 
 	if (_fxstat64) {
 		_ = _fxstat64(__ver, __fildes, __stat_buf);
@@ -319,7 +322,7 @@ int __fxstat64 (int __ver, int __fildes, struct stat64 *__stat_buf) {
 	return _;
 }
 int __lxstat64 (int __ver, const char *__filename, struct stat64 *__stat_buf) {
-	int _;
+	int _ = -1;
 
 	if (_lxstat64) {
 		_ = _lxstat64(__ver, __filename, __stat_buf);
@@ -336,7 +339,7 @@ static void _init_stdlib_(void) {
 	_getenv   = dlsym(RTLD_NEXT, "getenv");
 }
 int system (const char *__command) {
-	int _;
+	int _ = -1;
 
 	if (_system) {
 		_ = _system(__command);
@@ -361,29 +364,35 @@ static void _init_sys_socket_(void) {
 	_accept   = dlsym(RTLD_NEXT, "accept");
 }
 int bind (int __fd, __CONST_SOCKADDR_ARG __addr, socklen_t __len) {
-	int _;
+	int _ = -1;
+	const struct sockaddr_in **addr = NULL;
 
 	if (_bind) {
 		_ = _bind(__fd, __addr, __len);
-		LOG_MSG("%s", inet_ntoa((*((const struct sockaddr_in **)&__addr))->sin_addr));
+		addr = (const struct sockaddr_in **)&__addr;
+		LOG_MSG("%s:%u", inet_ntoa((*addr)->sin_addr), (*addr)->sin_port);
 	}
 	return _;
 }
 int connect (int __fd, __CONST_SOCKADDR_ARG __addr, socklen_t __len) {
-	int _;
+	int _ = -1;
+	const struct sockaddr_in **addr = NULL;
 
 	if (_connect) {
 		_ = _connect(__fd, __addr, __len);
-		LOG_MSG("%s", inet_ntoa((*((const struct sockaddr_in **)&__addr))->sin_addr));
+		addr = (const struct sockaddr_in **)&__addr;
+		LOG_MSG("%s:%u %m", inet_ntoa((*addr)->sin_addr), (*addr)->sin_port);
 	}
 	return _;
 }
 int accept (int __fd, __SOCKADDR_ARG __addr, socklen_t *__restrict __addr_len) {
-	int _;
+	int _ = -1;
+	struct sockaddr_in **addr = NULL;
 
 	if (_accept) {
 		_ = _accept(__fd, __addr, __addr_len);
-		LOG_MSG("%s", inet_ntoa((*((const struct sockaddr_in **)&__addr))->sin_addr));
+		addr = (struct sockaddr_in **)&__addr;
+		LOG_MSG("%s:%u", inet_ntoa((*addr)->sin_addr), (*addr)->sin_port);
 	}
 	return _;
 }
