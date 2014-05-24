@@ -8,7 +8,6 @@
 __attribute__((constructor)) void begin(void);
 __attribute__((destructor)) void after(void);
 
-
 /* ==== unistd.h ==== */
 static void _init_unistd_(void);
 static int (*_execl)   (const char *__path, const char *__arg, ...);
@@ -20,9 +19,9 @@ static int (*_execvp)  (const char *__file, char *const __argv[]);
 
 /* ==== fcntl.h ==== */
 static void _init_fcntl_(void);
-static int (*_open)    (const char *__file, int __oflag, ...);
+static int (*_open)    (const char *__file, int __oflag, __mode_t __mode);
 #ifdef __USE_LARGEFILE64
-static int (*_open64)  (const char *__file, int __oflag, ...);
+static int (*_open64)  (const char *__file, int __oflag, __mode_t __mode);
 #endif /* __USE_LARGEFILE64 */
 static void* (*_dlopen) (const char *__file, int __mode);
 

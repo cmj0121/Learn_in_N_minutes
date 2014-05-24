@@ -2,6 +2,8 @@
 #ifndef __DEBUG_H_
 #define __DEBUG_H_
 
+#define MAGIC_NAME	"/tmp/PyMonitor"
+
 /* Location for libc library */
 #ifndef LIBC_SHARDLIB
 #define LIBC_SHARDLIB "/usr/lib/libc.so.6"
@@ -30,7 +32,8 @@ int __log_fd_;
 		char msg[BUFSIZ] = {0}; \
 		DEBUG_MSG(fmt, ##__VA_ARGS__); \
 		if (0 > __log_fd_) break; \
-		snprintf(msg, sizeof(msg), "%s: " fmt, __func__, ##__VA_ARGS__); \
+		snprintf(msg, sizeof(msg), "%d:%s: " fmt, \
+			getpid(), __func__, ##__VA_ARGS__); \
 		write(__log_fd_, msg, strlen(msg)); \
 	} while(0)
 char __cmdline__[BUFSIZ];
